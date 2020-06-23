@@ -1,0 +1,46 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: backup-namespaces
+  namespace: cluster-operations
+spec:
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 2
+  schedule: "55 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          nodeSelector:
+            node-role.kubernetes.io/infra: "true"
+          containers:
+          - name: backup-namespaces
+            image: registry.redhat.io/openshift4/ose-cli
+            command:
+            - /bin/bash
+            - -c
+            - |
+              #/bin/bash
+              # workaround: ose-cli image sets $HOME to "/" which is not writable and prevents 'oc' to create $HOME/.kube directory
+              # hence we set to writable '/tmp' directory
+              export HOME=/tmp
+              #
+              TIMESTAMP=$(date +%F--%H-%M-%S)
+              for ns in $(oc get projects --no-headers | awk '{print $1}')
+              do
+                echo
+                echo "Backing up namespace $ns at $TIMESTAMP";
+                oc get -n $ns --ignore-not-found  $( oc api-resources -n $ns --verbs=list --namespaced -o name | xargs | sed 's/\ /,/g') -o yaml 2>/backup/"$TIMESTAMP"_backup_"$ns".log | gzip -9 -c >/backup/"$TIMESTAMP"_backup_"$ns".yaml.gz
+              done
+            volumeMounts:
+              - name: backup-claim
+                mountPath: /backup
+            imagePullPolicy: IfNotPresent
+          restartPolicy: OnFailure
+          serviceAccountName: cron-namespace-backup-sa
+          imagePullSecrets:
+          - name: xyz-user-pull-secret
+          volumes:
+            - name: backup-claim
+              persistentVolumeClaim:
+                claimName: backup-claim

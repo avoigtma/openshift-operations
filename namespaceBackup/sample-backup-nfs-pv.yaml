@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: my-sample-nfs-pv
+spec:
+  accessModes:
+  - ReadWriteMany
+  capacity:
+    storage: 1Gi
+  nfs:
+    path: /data/export/share
+    server: mynfs.myserver.example.com
+  persistentVolumeReclaimPolicy: Retain
+  claimRef:
+    kind: PersistentVolumeClaim
+    namespace: cluster-operations
+    name: backup-claim

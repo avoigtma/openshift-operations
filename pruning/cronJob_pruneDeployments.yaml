@@ -1,0 +1,33 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: prune-deployments
+  namespace: cluster-operations
+spec:
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  schedule: "45 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          nodeSelector:
+            node-role.kubernetes.io/infra: "true"
+          containers:
+          - name: prune-images
+            image: registry.redhat.io/openshift4/ose-cli
+            command:
+            - /bin/bash
+            - -c
+            - |
+              #/bin/bash
+              oc adm prune deployments --keep-younger-than=60m --confirm
+            imagePullPolicy: IfNotPresent
+            env:
+            - name: HOME
+              value: "/tmp"
+          restartPolicy: OnFailure
+          serviceAccountName: cron-prune-runner-sa
+          imagePullSecrets:
+          - name: xyz-user-pull-secret
+
