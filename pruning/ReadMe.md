@@ -108,7 +108,7 @@ spec:
       template:
         spec:
           nodeSelector:
-            node-role.kubernetes.io/infra: "true"
+            node-role.kubernetes.io/infra: ""
           containers:
           - name: prune-images
             image: registry.redhat.io/openshift4/ose-cli
@@ -158,7 +158,7 @@ spec:
       template:
         spec:
           nodeSelector:
-            node-role.kubernetes.io/infra: "true"
+            node-role.kubernetes.io/infra: ""
           containers:
           - name: prune-images
             image: registry.redhat.io/openshift4/ose-cli
@@ -200,7 +200,7 @@ spec:
       template:
         spec:
           nodeSelector:
-            node-role.kubernetes.io/infra: "true"
+            node-role.kubernetes.io/infra: ""
           containers:
           - name: prune-images
             image: registry.redhat.io/openshift4/ose-cli

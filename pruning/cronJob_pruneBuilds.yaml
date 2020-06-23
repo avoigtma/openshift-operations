@@ -12,9 +12,9 @@ spec:
       template:
         spec:
           nodeSelector:
-            node-role.kubernetes.io/infra: "true"
+            node-role.kubernetes.io/infra: ""
           containers:
-          - name: prune-images
+          - name: prune-builds
             image: registry.redhat.io/openshift4/ose-cli
             command:
             - /bin/bash
