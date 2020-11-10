@@ -48,3 +48,12 @@ Example:
 ```
 
 
+## Helper script
+
+```shell
+./createGraphs.sh
+```
+
+Creates PDF graphs for the 'stable' and 'fast' channels. Please adjust the scripts to cover the related release channels (currently for OCP v4.5 and v4.6 included).
+
+
