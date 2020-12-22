@@ -14,8 +14,8 @@ More enhanced approaches using tools like Restic [1] or Velero [2], or solutions
 
 | Date        | Version  | Comment 
 | :---------- | :------- | :---
-| `2020-06-23`  | 0.1     | Initial version
-| `2020-12-22`  | 0.2     | Add configuration ConfigMap; use cluster-admin (instead of cluster-reader) for Job execution; update documentation
+| 2020-06-23  | 0.1     | Initial version
+| 2020-12-22  | 0.2     | Add configuration ConfigMap; use cluster-admin (instead of cluster-reader) for Job execution; update documentation
 
 ## Prerequisites
 
