@@ -75,6 +75,10 @@ spec:
             imagePullPolicy: IfNotPresent
           restartPolicy: OnFailure
           serviceAccountName: cron-namespace-backup-sa
+          securityContext:
+            runAsUser: 9876
+            runAsGroup: 9999
+            supplementalGroups: [1235, 9999]
           imagePullSecrets:
           - name: xyz-user-pull-secret
           volumes:

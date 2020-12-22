@@ -1,0 +1,8 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: backup-config
+  namespace: cluster-operations
+data:
+  backup-clusterresources: 'true'
+  backup-namespace-selector: backup=true

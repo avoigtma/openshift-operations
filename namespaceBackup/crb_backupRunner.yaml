@@ -3,7 +3,7 @@ kind: ClusterRoleBinding
 metadata:
   name: cron-namespace-backup
 roleRef:
-  name: cluster-reader
+  name: cluster-admin
 subjects:
 - kind: ServiceAccount
   name: cron-namespace-backup-sa
