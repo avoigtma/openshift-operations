@@ -1,5 +1,11 @@
 # Update Graph for OpenShift v4.x
 
+## Online Version
+
+There is [https://access.redhat.com/labs/ocpupgradegraph/update_channel](https://access.redhat.com/labs/ocpupgradegraph/update_channel) in the Red Hat customer portal which allows to create an online display of the update graph.
+
+The below's procedure shows, how to create PDFs locally.
+
 ## Overview
 
 See Red Hat KCS #4583231 "OpenShift Container Platform (OCP) 4 upgrade paths" [https://access.redhat.com/solutions/4583231](https://access.redhat.com/solutions/4583231)
