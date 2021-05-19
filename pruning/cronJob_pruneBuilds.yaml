@@ -6,23 +6,23 @@ metadata:
 spec:
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 1
-  schedule: "45 * * * *"
+  schedule: "00 * * * *"
   jobTemplate:
     spec:
       template:
         spec:
           nodeSelector:
-            node-role.kubernetes.io/infra: ""
+            node-role.kubernetes.io/worker: ""
           containers:
           - name: prune-builds
-            image: registry.redhat.io/openshift4/ose-cli
+            image: registry.redhat.io/openshift4/ose-cli:v4.7
             command:
             - /bin/bash
             - -c
             - |
               #/bin/bash
               oc adm prune builds --orphans --keep-complete=3 --keep-failed=1 --keep-younger-than=60m --confirm
-            imagePullPolicy: IfNotPresent
+            imagePullPolicy: Always
             env:
             - name: HOME
               value: "/tmp"
@@ -30,4 +30,3 @@ spec:
           serviceAccountName: cron-prune-runner-sa
           imagePullSecrets:
           - name: xyz-user-pull-secret
-

@@ -4,14 +4,28 @@ Build, DeploymentConfigs and Images require regular pruning jobs on the platform
 
 We establish CronJobs which run such pruning commands (`oc adm prune ...`) in a pod on the platform.
 
+## Prerequisites/Preparations
+
 > The example is based upon a namespace 'cluster-operations'.
+> 
+> Please create this namespace/project before continuing with the next sections.
+
+The CronJob definitions below define node selectors on the worker nodes. Please remove or adjust depending on your cluster node role definitions.
+
+
+## Note: Adjust to your OpenShift release
+
+> Please adjust the image references in below's CronJob definitions to your matching OpenShift release.
+
+The examples below are currently based upon OpenShift v4.7 and use the generic 'v4.7' tag. The `imagePullPolicy: Always` ensures that the latest image release within the OpenShift version is always used.
 
 ## Create Service Account
 
 We create a Service Account to run the CronJob Pod for pruning activities.
 
 ### using command line
-```
+
+```shell
 oc create sa cron-prune-runner-sa
 ```
 
@@ -19,7 +33,7 @@ oc create sa cron-prune-runner-sa
 
 Create ServiceAccount Yaml file `sa_pruneRunnner.yaml`
 
-```
+```yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -35,7 +49,7 @@ The Service Account needs to get a role binding to obtain the required permissio
 
 Create the Yaml file `crb_prungRunner.yaml`
 
-```
+```yaml
 apiVersion: authorization.openshift.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -48,7 +62,7 @@ subjects:
   namespace: "cluster-operations"
 ```
 
-and import the yaml using `oc create -f sa_pruneRunnner.yaml`.
+and import the yaml using `oc apply -f crb_pruneRunnner.yaml`.
 
 > Note: For simplicity, we use the 'ClusterAdmin' role. It would be a better solution to create a custom role definition having only the required permissions for the Service Account. However, as the pruning jobs anyway run in a namespace owned by a platform team and thus 'ClusterAdmin' enabled users, using 'cluster-admin' role is acceptable.
 
@@ -63,7 +77,7 @@ Yaml File Example `pullSecretSample.yaml`
 
 > Note: get the correct one from the Web page to obtain the correct pull secret. Example has dummy value only and the Yaml file cannot be imported as is!
 
-```
+```yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -76,8 +90,8 @@ type: kubernetes.io/dockerconfigjson
 
 Import the secret. 
 
-```
-oc create -f pullSecretSample.yaml
+```shell
+oc apply -f pullSecretSample.yaml
 ```
 
 
@@ -93,7 +107,7 @@ The CronJob uses the created service account for running the pod and requires th
 > - `oc adm prune image ...` command attempts to use the internal 'https' service URL.
 > - For simplicity of the image pruning in the pod, the `--force-insecure` is being used.
 
-```
+```yaml
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
@@ -108,10 +122,10 @@ spec:
       template:
         spec:
           nodeSelector:
-            node-role.kubernetes.io/infra: ""
+            node-role.kubernetes.io/worker: ""
           containers:
           - name: prune-images
-            image: registry.redhat.io/openshift4/ose-cli
+            image: registry.redhat.io/openshift4/ose-cli:v4.7
             command:
             - /bin/bash
             - -c
@@ -119,7 +133,7 @@ spec:
               #/bin/bash
               oc adm prune images --keep-tag-revisions=3 --keep-younger-than=60m --force-insecure --confirm
               oc adm prune images --prune-over-size-limit --force-insecure --confirm
-            imagePullPolicy: IfNotPresent
+            imagePullPolicy: Always
             env:
             - name: HOME
               value: "/tmp"
@@ -130,10 +144,10 @@ spec:
 ```
 
 
-Create the CronJob object
+Create the CronJob object in the cluster:
 
-```
-oc create -f cronJob_pruneImages.yaml
+```shell
+oc apply -f cronJob_pruneImages.yaml
 ```
 
 ## Create Cron Job - Pruning Deployments
@@ -143,7 +157,7 @@ definition with commands for pruning Deployments.
 
 E.g. using following `cronJob_pruneDeployments.yaml`:
 
-```
+```yaml
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
@@ -158,17 +172,17 @@ spec:
       template:
         spec:
           nodeSelector:
-            node-role.kubernetes.io/infra: ""
+            node-role.kubernetes.io/worker: ""
           containers:
           - name: prune-images
-            image: registry.redhat.io/openshift4/ose-cli
+            image: registry.redhat.io/openshift4/ose-cli:v4.7
             command:
             - /bin/bash
             - -c
             - |
               #/bin/bash
               oc adm prune deployments --keep-younger-than=60m --confirm
-            imagePullPolicy: IfNotPresent
+            imagePullPolicy: Always
             env:
             - name: HOME
               value: "/tmp"
@@ -178,6 +192,13 @@ spec:
           - name: xyz-user-pull-secret
 ```
 
+Create the CronJob object in the cluster:
+
+```shell
+oc apply -f cronJob_pruneDeployments.yaml
+```
+
+
 ## Create Cron Job - Pruning Builds
 
 Create a similar CronJob and repleace the 'oc adm prune images ...' commands in the CronJob 
@@ -185,7 +206,7 @@ definition with commands for pruning Builds.
 
 E.g. using following `cronJob_pruneBuilds.yaml`:
 
-```
+```yaml
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
@@ -200,17 +221,17 @@ spec:
       template:
         spec:
           nodeSelector:
-            node-role.kubernetes.io/infra: ""
+            node-role.kubernetes.io/worker: ""
           containers:
           - name: prune-images
-            image: registry.redhat.io/openshift4/ose-cli
+            image: registry.redhat.io/openshift4/ose-cli:v4.7
             command:
             - /bin/bash
             - -c
             - |
               #/bin/bash
               oc adm prune builds --orphans --keep-complete=3 --keep-failed=1 --keep-younger-than=60m --confirm
-            imagePullPolicy: IfNotPresent
+            imagePullPolicy: Always
             env:
             - name: HOME
               value: "/tmp"
@@ -220,5 +241,8 @@ spec:
           - name: xyz-user-pull-secret
 ```
 
+Create the CronJob object in the cluster:
 
-
+```shell
+oc apply -f cronJob_pruneBuilds.yaml
+```
