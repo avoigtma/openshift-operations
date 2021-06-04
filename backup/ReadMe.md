@@ -1,14 +1,23 @@
-# Namespace Backup
+# Backup Topics
 
 While an etcd backup is an essential part of OpenShift Day-2 operations activities, establishing the 'backup' of individual namespace artefacts to YAML or JSON can be helpful as well.
 
-We show a simple approach for exporting all namespaces of a cluster using an OpenShift CronJob.
+We show a simple approach for **exporting all namespaces** of a cluster using an OpenShift CronJob.
+
+In addition, **backing up the audit logs** residing on the master nodes using a custom approach is described. For audit logs, sending these using OpenShift LogForwarding API to an external log instance or SIEM system is likely a better approach.
 
 More enhanced approaches using tools like Restic [1] or Velero [2], or solutions like trillio.io [3] (commercial solution) can be considered as well, dependent on the goals.
 
-[1] <https://restic.net/>
-[2] <https://velero.io/>
-[3] <https://www.trilio.io/triliovault-for-kubernetes/>
+- [1] <https://restic.net/>
+- [2] <https://velero.io/>
+- [3] <https://www.trilio.io/triliovault-for-kubernetes/>
+
+## Contents
+
+See separate chapters below for
+
+* Namespace Backup
+* Audit Log Backup
 
 ## History
 
@@ -16,12 +25,16 @@ More enhanced approaches using tools like Restic [1] or Velero [2], or solutions
 | :---------- | :------- | :---
 | 2020-06-23  | 0.1     | Initial version
 | 2020-12-22  | 0.2     | Add configuration ConfigMap; use cluster-admin (instead of cluster-reader) for Job execution; update documentation
+| 2021-06-04  | 0.3     | Rename directory to 'backup'; add CronJob to backup audit logs from master nodes
 
-## Prerequisites
+
+## Namespace Backup
+
+### Prerequisites
 
 > The example is based upon a namespace 'cluster-operations'.
 
-## Create Service Account
+### Create Service Account
 
 We create a Service Account to run the CronJob Pod for pruning activities.
 
@@ -41,7 +54,7 @@ Import this file to create the service account
 oc apply -f sa_backupRunner.yaml
 ```
 
-## Create Role Binding for Service Account
+### Create Role Binding for Service Account
 
 The Service Account needs to get a role binding to obtain the required permissions.
 
@@ -69,7 +82,7 @@ oc apply -f crb_backupRunner.yaml
 ```
 
 
-## Create Image Pull Secret
+### Create Image Pull Secret
 
 You will need to create a registry service account to use prior to completing any of the following tasks. See <https://access.redhat.com/terms-based-registry/> to create the pull secret.
 
@@ -101,9 +114,9 @@ oc apply -f pullSecretSample.yaml
 
 
 
-## Create Cron Job - Namespace Backup
+### Create Cron Job - Namespace Backup
 
-### Backup target volume
+#### Backup target volume
 
 We use a PVC as the target for the backup. The PVC can for example be bound to a NFS PV as shown below.
 
@@ -148,7 +161,7 @@ spec:
   volumeMode: Filesystem
 ```
 
-### Backup Configuration
+#### Backup Configuration
 
 The ConfigMap `backup-config` is used for simple configuration of the backup. the ConfigMap covers two settings
 
@@ -180,7 +193,7 @@ oc apply -f cm_backup-config.yaml
 ```
 
 
-### The backup CronJob
+#### The backup CronJob
 
 Create the Yaml file `cronJob_backupNamespaces.yaml`.
 The CronJob uses the created service account for running the pod and requires the pull secret as `imagePullSecret`.
@@ -282,7 +295,81 @@ Create the CronJob object
 oc apply -f cronJob_backupNamespaces.yaml
 ```
 
-### Creating files using defined UID/GID
+#### Creating files using defined UID/GID
 
 If a NFS share mounted using the PV requires to have defined UID/GID for the backup files being created, use a 'securityContext' definition in the backup CronJob. See example file `cronJob_backupNamespaces_withUIDGID.yaml`.
 
+
+## Audit Log Backup
+
+Create a CronJob similar to the namespace backup, but using different embedded scripting to gather the audit logs using `oc` client.
+
+> Adjust the schedule entry when the CronJob is getting executed.
+
+File `cronJob_backupAuditLog.yaml`
+
+```yaml
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: backup-auditlog
+  namespace: cluster-operations
+spec:
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 2
+  concurrencyPolicy: "Forbid"
+  schedule: "10 3 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          nodeSelector:
+            node-role.kubernetes.io/infra: ""
+          containers:
+          - name: backup-auditlog
+            image: registry.redhat.io/openshift4/ose-cli
+            command:
+            - /bin/bash
+            - -c
+            - |
+              #/bin/bash
+              # workaround: ose-cli image sets $HOME to "/" which is not writable and prevents 'oc' to create $HOME/.kube directory
+              # hence we set to writable '/tmp' directory
+              export HOME=/tmp
+              #
+              # backup timestamp
+              TIMESTAMP=$(date +%F--%H-%M-%S)
+              # temporary directory for log download from master nodes
+              DOWNLOADDIR=/tmp/ocp-master-logs
+              for path in kube-apiserver openshift-apiserver oauth-apiserver ; do
+                oc adm node-logs --role=master --path=$path | while read line ; do 
+                  echo "Downloading $line ..." 
+                  node=$(echo "$line" | awk '{print $1}')
+                  log=$(echo "$line" | awk '{print $2}')
+                  mkdir -p $DOWNLOADDIR/$node/$path 2>/dev/null
+                  oc adm node-logs $node --path=$path/$log > $DOWNLOADDIR/$node/$path/$log
+                done
+              done
+              echo "Creating backup tar archive"
+              tar -zcf /backup/"$TIMESTAMP"_backup_auditlogs.tar.gz $DOWNLOADDIR
+              echo "Removing temporary log download directory"
+              rm -fr $LOGDIR
+            volumeMounts:
+              - name: backup-claim
+                mountPath: /backup
+            imagePullPolicy: IfNotPresent
+          restartPolicy: OnFailure
+          serviceAccountName: cron-namespace-backup-sa
+          imagePullSecrets:
+          - name: xyz-user-pull-secret
+          volumes:
+            - name: backup-claim
+              persistentVolumeClaim:
+                claimName: backup-claim
+```
+
+Create the CronJob object
+
+```shell
+oc apply -f cronJob_backupAuditLog.yaml
+```

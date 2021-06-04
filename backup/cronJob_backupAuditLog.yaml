@@ -1,0 +1,57 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: backup-auditlog
+  namespace: cluster-operations
+spec:
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 2
+  concurrencyPolicy: "Forbid"
+  schedule: "10 3 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          nodeSelector:
+            node-role.kubernetes.io/infra: ""
+          containers:
+          - name: backup-auditlog
+            image: registry.redhat.io/openshift4/ose-cli
+            command:
+            - /bin/bash
+            - -c
+            - |
+              #/bin/bash
+              # workaround: ose-cli image sets $HOME to "/" which is not writable and prevents 'oc' to create $HOME/.kube directory
+              # hence we set to writable '/tmp' directory
+              export HOME=/tmp
+              #
+              # backup timestamp
+              TIMESTAMP=$(date +%F--%H-%M-%S)
+              # temporary directory for log download from master nodes
+              DOWNLOADDIR=/tmp/ocp-master-logs
+              for path in kube-apiserver openshift-apiserver oauth-apiserver ; do
+                oc adm node-logs --role=master --path=$path | while read line ; do 
+                  echo "Downloading $line ..." 
+                  node=$(echo "$line" | awk '{print $1}')
+                  log=$(echo "$line" | awk '{print $2}')
+                  mkdir -p $DOWNLOADDIR/$node/$path 2>/dev/null
+                  oc adm node-logs $node --path=$path/$log > $DOWNLOADDIR/$node/$path/$log
+                done
+              done
+              echo "Creating backup tar archive"
+              tar -zcf /backup/"$TIMESTAMP"_backup_auditlogs.tar.gz $DOWNLOADDIR
+              echo "Removing temporary log download directory"
+              rm -fr $LOGDIR
+            volumeMounts:
+              - name: backup-claim
+                mountPath: /backup
+            imagePullPolicy: IfNotPresent
+          restartPolicy: OnFailure
+          serviceAccountName: cron-namespace-backup-sa
+          imagePullSecrets:
+          - name: xyz-user-pull-secret
+          volumes:
+            - name: backup-claim
+              persistentVolumeClaim:
+                claimName: backup-claim
