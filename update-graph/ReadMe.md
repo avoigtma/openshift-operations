@@ -40,11 +40,21 @@ yum install -y graphviz
 yum install -y inkscape
 ```
 
+### Get the script
+
+```shell
+wget https://raw.githubusercontent.com/openshift/cincinnati/master/hack/graph.sh
+```
+
 ## Create a visual represenation
 
 Run the script supplying 2 parameters
 
-* parameter 1: OpenShift Update Channel, e.g. 'stable-4.5'
+* parameter 1: OpenShift Update Channel, e.g. 'stable-4.7'
+	* common channels per minor release of OpenShift
+		* 'stable-4.7'
+		* 'fast-4.7'
+		* 'candidate-4.7'
 * parameter 2: output format supported by 'graphviz', e.g. 'pdf', 'png' or 'svg'
 
 Example:

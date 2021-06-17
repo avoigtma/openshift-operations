@@ -15,6 +15,6 @@ chmod 755 graph.sh
 echo "Generating graph for channel '$CHANNEL'"
 echo "(please change variable in script to adjust channel)"
 
-curl -sH 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/v1/graph?channel='$CHANNEL'&arch=amd64' | ./graph.sh | dot -T$FORMAT > graph_$CHANNEL.$FORMAT
+##curl -sH 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/v1/graph?channel='$CHANNEL'&arch=amd64' | ./graph.sh | dot -T$FORMAT > graph_$CHANNEL.$FORMAT
 
-
+curl -s -X 'GET' -H 'accept: application/json' 'https://api.openshift.com/api/upgrades_info/v1/graph?channel='$CHANNEL | ./graph.sh | dot -T$FORMAT > graph_$CHANNEL.$FORMAT
