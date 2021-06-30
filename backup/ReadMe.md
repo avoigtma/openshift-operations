@@ -6,11 +6,15 @@ We show a simple approach for **exporting all namespaces** of a cluster using an
 
 In addition, **backing up the audit logs** residing on the master nodes using a custom approach is described. For audit logs, sending these using OpenShift LogForwarding API to an external log instance or SIEM system is likely a better approach.
 
-More enhanced approaches using tools like Restic [1] or Velero [2], or solutions like trillio.io [3] (commercial solution) can be considered as well, dependent on the goals.
+More enhanced backup approaches using include the recent OpenShift API for Data Protection (OADP) [1], tools like Restic [3] or Velero [4], or commercial solutions like trillio.io [5] (commercial solution) can be considered as well, dependent on the goals.
 
-- [1] <https://restic.net/>
-- [2] <https://velero.io/>
-- [3] <https://www.trilio.io/triliovault-for-kubernetes/>
+The blog "Backup and Recovery with OpenShift APIs for Data Protection (OADP)" [2] describes a backup approach using OADP, Velero and Restic.
+
+- [1] <https://github.com/konveyor/oadp-operator>
+- [2] <https://www.opensourcerers.org/2021/05/10/backup-and-recovery-with-openshift-apis-for-data-protection-oadp/>
+- [3] <https://restic.net/>
+- [4] <https://velero.io/>
+- [5] <https://www.trilio.io/triliovault-for-kubernetes/>
 
 ## Contents
 
